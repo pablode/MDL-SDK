@@ -1,0 +1,147 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      cache-key-prefix:
+        required: true
+        type: string
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  install-dir: INSTALL
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.image }}
+
+    strategy:
+      matrix:
+        include:
+        - name: Ubuntu 20.04 / GCC
+          os-family: ubuntu
+          image: ubuntu-20.04
+          clang-exe-suffix:
+          build-dir: "BUILD"
+          install-target: install
+          thread-count: 2
+
+        - name: Windows 10 / MSVC
+          os-family: windows
+          image: windows-2019
+          clang-exe-suffix: .exe
+          build-dir: "C:/BUILD"
+          install-target: INSTALL
+          # Avoid OOM situation
+          thread-count: 1
+
+    env:
+      build-dir: "${{ matrix.build-dir }}"
+      cache-key: "${{ inputs.cache-key-prefix}}_${{ matrix.image }}"
+
+    steps:
+    - name: Check cache for entry
+      id: restore
+      uses: actions/cache/restore@v3
+      with:
+        path: "MDL-SDK/${{ env.install-dir }}"
+        key: ${{ env.cache-key }}
+        lookup-only: true
+
+    - name: Free up disk space
+      if: steps.restore.outputs.cache-hit != 'true' && matrix.os-family == 'ubuntu'
+      run: |
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        sudo rm -rf /opt/ghc
+
+    - name: Install Python
+      if: steps.restore.outputs.cache-hit != 'true'
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.8"
+
+    - name: Install Clang
+      if: steps.restore.outputs.cache-hit != 'true'
+      uses: KyleMayes/install-llvm-action@v1
+      with:
+        version: "12.0.1"
+        directory: "${{ runner.temp }}/llvm/"
+
+    # Avoid compilation error with Windows SDK 17763
+    - name: Set up Windows SDK
+      if: steps.restore.outputs.cache-hit != 'true' && matrix.os-family == 'windows'
+      uses: GuillaumeFalourd/setup-windows10-sdk-action@v1.11
+      with:
+        sdk-version: 18362
+
+    - name: Build Boost
+      if: steps.restore.outputs.cache-hit != 'true'
+      id: build-boost
+      uses: egor-tensin/build-boost@v1
+      with:
+        version: 1.81.0
+        libraries: filesystem thread
+        directory: "${{ runner.temp }}/boost"
+
+    - name: Check out repository
+      if: steps.restore.outputs.cache-hit != 'true'
+      uses: actions/checkout@v3
+      with:
+        repository: pablode/MDL-SDK
+        ref: GA-2023.0.4
+        path: MDL-SDK
+
+    - name: Patch source tree
+      if: steps.restore.outputs.cache-hit != 'true'
+      run: |
+        rm "MDL-SDK/cmake/find/find_freeimage_ext.cmake"
+        rm "MDL-SDK/cmake/find/find_openimageio_ext.cmake"
+
+    - name: Generate build system files
+      if: steps.restore.outputs.cache-hit != 'true'
+      run: |
+        cmake \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_INSTALL_PREFIX="MDL-SDK/${{ env.install-dir }}" \
+          -DCMAKE_SYSTEM_VERSION=10.0.18362.0 \
+          -DMDL_BUILD_SDK_EXAMPLES=OFF \
+          -DMDL_BUILD_CORE_EXAMPLES=OFF \
+          -DMDL_ENABLE_CUDA_EXAMPLES=OFF \
+          -DMDL_ENABLE_OPENGL_EXAMPLES=OFF \
+          -DMDL_ENABLE_QT_EXAMPLES=OFF \
+          -DMDL_ENABLE_VULKAN_EXAMPLES=OFF \
+          -DMDL_ENABLE_D3D12_EXAMPLES=OFF \
+          -DMDL_BUILD_DDS_PLUGIN=OFF \
+          -DMDL_BUILD_FREEIMAGE_PLUGIN=OFF \
+          -DMDL_BUILD_OPENIMAGEIO_PLUGIN=OFF \
+          -DMDL_BUILD_DOCUMENTATION=OFF \
+          -DMDL_LOG_DEPENDENCIES=ON \
+          -DBOOST_ROOT="${{ steps.build-boost.outputs.root }}" \
+          -DBOOST_LIBRARYDIR="${{ steps.build-boost.outputs.librarydir }}" \
+          -Dclang_PATH="${{ env.LLVM_PATH }}/bin/clang++${{ matrix.clang-exe-suffix }}" \
+          -B "${{ env.build-dir }}" \
+          MDL-SDK
+
+    # Since cmake --install fails, we build the buildsystem specific install target.
+    - name: Compile & install
+      if: steps.restore.outputs.cache-hit != 'true'
+      working-directory: "${{ env.build-dir }}"
+      run: cmake --build . -j ${{ matrix.thread-count }} --target ${{ matrix.install-target }} --config Release
+
+    - name: Copy include directory
+      if: steps.restore.outputs.cache-hit != 'true'
+      run: |
+        cp -r "MDL-SDK/include" "MDL-SDK/${{ env.install-dir }}/include"
+        rm "MDL-SDK/${{ env.install-dir }}/include/CMakeLists.txt"
+
+    - name: Save to cache
+      if: steps.restore.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v3
+      with:
+        path: "MDL-SDK/${{ env.install-dir }}"
+        key: ${{ env.cache-key }}
