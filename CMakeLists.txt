@@ -47,10 +47,6 @@ set(MDL_DOC_FOLDER ${CMAKE_SOURCE_DIR}/doc CACHE PATH "The folder that contains 
 # default values for internal builds, before project()
 if(EXISTS ${MDL_BASE_FOLDER}/CMakeInternalBuildConfig_Toolchain_File.cmake AND NOT MDL_USE_LOCAL_DEPENDENCIES)
    include(${MDL_BASE_FOLDER}/CMakeInternalBuildConfig_Toolchain_File.cmake)
-# otherwise, the toolchain has to be provided manually (unless system packages are used on Linux)
-elseif(NOT CMAKE_TOOLCHAIN_FILE AND NOT UNIX)
-    set(CMAKE_TOOLCHAIN_FILE "" CACHE FILEPATH "Path to toolchain file supplied to cmake.")
-    message(FATAL_ERROR "No toolchain set. Please set CMAKE_TOOLCHAIN_FILE to <vcpkg_root>/scripts/buildsystems/vcpkg.cmake")
 endif()
 
 # before project() due to its use in CMAKE_TOOLCHAIN_FILE
