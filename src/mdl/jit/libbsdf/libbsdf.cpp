@@ -1729,7 +1729,7 @@ BSDF_API void sheen_bsdf_evaluate(
     float nk1, nk2;
     const float3_float contrib = microfacet_evaluate(
         ph, fresnel_function, data, state, inherited_normal, state->texture_tangent_u(0), scatter_reflect,
-        SHEEN_BSDF, adapted_roughness, adapted_roughness, diffuse_multiscatter ? multiscatter_texture_id : 0, nk1, nk2);
+        SHEEN_BSDF, adapted_roughness, adapted_roughness, diffuse_multiscatter ? 0 : multiscatter_texture_id, nk1, nk2);
 
     add_elemental_bsdf_evaluate_contribution(
         data, handle,
