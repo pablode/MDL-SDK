@@ -1,6 +1,7 @@
 name: Build
 
 on:
+  push:
   workflow_call:
     inputs:
       cache-key-prefix:
@@ -30,18 +31,19 @@ jobs:
           install-target: install
           thread-count: 2
 
-        - name: Windows 10 / MSVC
-          os-family: windows
-          image: windows-2019
-          clang-exe-suffix: .exe
-          build-dir: "C:/BUILD"
-          install-target: INSTALL
-          # Avoid OOM situation
-          thread-count: 1
+        #- name: Windows 10 / MSVC
+        #  os-family: windows
+        #  image: windows-2019
+        #  clang-exe-suffix: .exe
+        #  build-dir: "C:/BUILD"
+        #  install-target: INSTALL
+        #  # Avoid OOM situation
+        #  thread-count: 1
 
     env:
       build-dir: "${{ matrix.build-dir }}"
-      cache-key: "${{ inputs.cache-key-prefix }}_${{ matrix.image }}"
+      #cache-key: "${{ inputs.cache-key-prefix }}_${{ matrix.image }}"
+      cache-key: "cache_${{ matrix.image }}"
 
     steps:
     - name: Check cache for entry
@@ -93,7 +95,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         repository: pablode/MDL-SDK
-        ref: GA-2023.1.2
+        ref: GA-2023.1.2-dlopen-fix
         path: MDL-SDK
 
     - name: Patch source tree
