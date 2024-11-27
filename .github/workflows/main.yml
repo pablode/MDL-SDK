@@ -1,6 +1,7 @@
 name: Build
 
 on:
+  push:
   workflow_call:
     inputs:
       cache-key-prefix:
@@ -105,7 +106,7 @@ jobs:
       if: steps.restore.outputs.cache-hit != 'true'
       run: |
         cmake \
-          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_BUILD_TYPE=Debug \
           -DCMAKE_INSTALL_PREFIX="MDL-SDK/${{ env.install-dir }}" \
           -DCMAKE_SYSTEM_VERSION=10.0.18362.0 \
           -DMDL_BUILD_SDK_EXAMPLES=OFF \
@@ -130,7 +131,7 @@ jobs:
     - name: Compile & install
       if: steps.restore.outputs.cache-hit != 'true'
       working-directory: "${{ env.build-dir }}"
-      run: cmake --build . -j ${{ matrix.thread-count }} --target ${{ matrix.install-target }} --config Release
+      run: cmake --build . -j ${{ matrix.thread-count }} --target ${{ matrix.install-target }} --config Debug
 
     - name: Copy include directory
       if: steps.restore.outputs.cache-hit != 'true'
