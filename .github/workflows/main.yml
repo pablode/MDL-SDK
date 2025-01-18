@@ -81,7 +81,7 @@ jobs:
     - name: Build Boost
       if: steps.restore.outputs.cache-hit != 'true'
       id: build-boost
-      uses: egor-tensin/build-boost@v1
+      uses: mickem/build-boost@v1
       with:
         version: 1.81.0
         libraries: filesystem thread
