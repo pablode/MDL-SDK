@@ -113,7 +113,7 @@ jobs:
       run: tar -zcvf mdl-sdk.zip *
 
     - name: Upload archive
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: mdl-sdk
         path: MDL-SDK/mdl-sdk.zip
