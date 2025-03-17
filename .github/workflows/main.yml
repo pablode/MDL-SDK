@@ -22,9 +22,9 @@ jobs:
     strategy:
       matrix:
         include:
-        - name: Ubuntu 20.04 / GCC
+        - name: Ubuntu 22.04 / GCC
           os-family: ubuntu
-          image: ubuntu-20.04
+          image: ubuntu-22.04
           clang-exe-suffix:
           build-dir: "BUILD"
           install-target: install
